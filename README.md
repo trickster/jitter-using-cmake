@@ -8,6 +8,8 @@ For reference, after running `cmake`, there will be a file created `izmirvm-vm-m
 All the `*-syntax.*` files and lex/bison files are not needed here.
 The exported symbols from the VM shared library can be imported into any other language and can be used.
 
+To look at symbols exported look at generated `izmirvm-vm.h` and `izmirvm-vm-main.c`.
+
 ## Caveats
 
 CMake pipeline is bigger because we build `jitter` twice, once without `JITTER_SUBPACKAGE_DIRECTORY` (generates `jitter` tool) and once with (generated shared library `libjitter.so`).
