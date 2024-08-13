@@ -36,3 +36,20 @@ instruction print ()
         print(top);
     end
 end
+
+instruction heap-allocate (?n 4 8 12 16 24 32 36 48 52 64)
+  code
+#ifdef JITTER_GC_STUB
+    /* FIXME: I might want to merge this, along with the body of other
+       instructions, into a macro.  This may still be factored in a different
+       way, but the idea looks correct and promising. */
+    /* Bump the allocation pointer, unconditionally.  Another instruction
+       will check if it went out of the nursery. */
+    const size_t allocation_size = JITTER_ARGN0;
+    JITTERLISPVM_STATE_RUNTIME_FIELD (allocation_next) += allocation_size;
+#else
+    /* Nothing to do.  With the ordinary non-stub heap all the actual
+       memory allocation happens in primitive-cons-special. */
+#endif //#ifdef JITTER_GC_STUB
+  end
+end

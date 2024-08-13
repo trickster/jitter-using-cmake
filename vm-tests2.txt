@@ -1,0 +1,5 @@
+pushconstant 2
+print
+pushconstant 10
+print
+heap-allocate 32
