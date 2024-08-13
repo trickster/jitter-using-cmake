@@ -3,24 +3,39 @@ cmake_minimum_required(VERSION 3.10)
 project(izmirvm)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Find Jitter executable
-find_program(JITTER_EXECUTABLE jitter)
-if(NOT JITTER_EXECUTABLE)
-    message(FATAL_ERROR "Could not find Jitter executable. Please make sure it is installed and in your PATH.")
+# --- Download and Install Jitter ---
+include(ExternalProject)
+
+ExternalProject_Add(jitter
+    GIT_REPOSITORY https://git.ageinghacker.net/jitter
+    GIT_TAG master  # Or specify a specific tag if needed
+    PREFIX ${CMAKE_BINARY_DIR}/jitter-install
+    CONFIGURE_COMMAND <SOURCE_DIR>/configure
+    BUILD_COMMAND make
+    INSTALL_COMMAND make install
+)
+
+# --- Find Jitter After Installation ---
+find_program(JITTER_EXECUTABLE jitter HINTS ${CMAKE_BINARY_DIR}/jitter-install/bin)
+find_library(JITTER_LIBRARY libjitter HINTS ${CMAKE_BINARY_DIR}/jitter-install/lib)
+
+# Check if Jitter is found
+if(NOT JITTER_EXECUTABLE OR NOT JITTER_LIBRARY)
+    message(FATAL_ERROR "Could not find Jitter after installation. Please check the installation process.")
 endif()
+
+
+# Find Jitter executable
+# find_program(JITTER_EXECUTABLE jitter)
+# if(NOT JITTER_EXECUTABLE)
+#     message(FATAL_ERROR "Could not find Jitter executable. Please make sure it is installed and in your PATH.")
+# endif()
 
 # Find Jitter library
-find_library(JITTER_LIBRARY libjitter NAMES jitter PATHS ${JITTER_LIBRARY_DIR})
-if(NOT JITTER_LIBRARY)
-    message(FATAL_ERROR "Could not find Jitter library. Please make sure it is installed and in the specified directory.")
-endif()
-
-add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/izmirvm-vm.h ${CMAKE_SOURCE_DIR}/izmirvm-vm1.c ${CMAKE_SOURCE_DIR}/izmirvm-vm2.c ${CMAKE_SOURCE_DIR}/izmirvm-vm-main.c
-    COMMAND ${JITTER_EXECUTABLE} --output ${CMAKE_SOURCE_DIR} --frontend ${CMAKE_SOURCE_DIR}/izmirvm.jitter
-    DEPENDS ${CMAKE_SOURCE_DIR}/izmirvm.jitter
-    VERBATIM
-)
+# find_library(JITTER_LIBRARY libjitter NAMES jitter PATHS ${JITTER_LIBRARY_DIR})
+# if(NOT JITTER_LIBRARY)
+#     message(FATAL_ERROR "Could not find Jitter library. Please make sure it is installed and in the specified directory.")
+# endif()
 
 # Set Jitter include directories
 set(JITTER_INCLUDE_DIRS
@@ -33,6 +48,13 @@ set(JITTER_LIBRARY_DIR /usr/local/lib)
 
 # Set Jitter libraries
 set(JITTER_LIBRARIES ${JITTER_LIBRARY})
+
+add_custom_command(
+    OUTPUT ${CMAKE_SOURCE_DIR}/izmirvm-vm.h ${CMAKE_SOURCE_DIR}/izmirvm-vm1.c ${CMAKE_SOURCE_DIR}/izmirvm-vm2.c ${CMAKE_SOURCE_DIR}/izmirvm-vm-main.c
+    COMMAND ${JITTER_EXECUTABLE} --output ${CMAKE_SOURCE_DIR} --frontend ${CMAKE_SOURCE_DIR}/izmirvm.jitter
+    DEPENDS ${CMAKE_SOURCE_DIR}/izmirvm.jitter
+    VERBATIM
+)
 
 set(IZMIRVM_SOURCES
     izmirvm-vm.h
