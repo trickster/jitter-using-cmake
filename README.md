@@ -1,6 +1,22 @@
 # Using jitter example
 
-Prerequesites:
+## Prereqs:
+
+```sh
+sudo apt install texinfo libtool flex bison help2man libgc1 libgc-dev autoconf automake cmake
+```
+
+## Automatic installation
+
+1. Install jitter, build vm and interpreter all at once
+
+```
+mkdir build && cd build
+cmake ..
+make
+```
+
+## Manual installation (go to [this](https://github.com/trickster/jitter-using-cmake/tree/3988147a90f68a89930facafc417adae4663f14c) commit
 
 1. Install `gitter`
 
@@ -20,4 +36,3 @@ cd build
 cmake ..
 make
 ```
-
