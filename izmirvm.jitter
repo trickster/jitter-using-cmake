@@ -1,0 +1,38 @@
+legal-notice
+end
+
+vm
+  set prefix "izmirvm"
+end
+
+stack s
+    long-name "mainstack"
+    c-element-type "long"
+    tos-optimized
+    guard-overflow
+    guard-underflow
+end
+
+late-c
+    code
+static void print(long n)
+{
+  printf("%li\n", n);
+}
+    end
+end
+
+instruction pushconstant (?n)
+    code
+        jitter_int k = JITTER_ARGN0;
+        JITTER_PUSH_MAINSTACK(k);
+    end
+end
+
+instruction print ()
+    code
+        long top = JITTER_TOP_MAINSTACK();
+        JITTER_DROP_MAINSTACK();
+        print(top);
+    end
+end

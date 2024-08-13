@@ -1,0 +1,4 @@
+pushconstant 2
+print
+pushconstant 7
+print
