@@ -28,7 +28,7 @@
 #ifndef IZMIR_SYNTAX_H_
 #define IZMIR_SYNTAX_H_
 
-#include <stdlib.h> /* for size_t */
+#include <stdlib.h>
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-fatal.h>
