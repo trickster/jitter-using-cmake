@@ -19,40 +19,40 @@ FetchContent_GetProperties(jitter)
 FetchContent_Populate(jitter)
 
 # this will install jitter tool, for shared library
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} ./bootstrap
-    RESULT_VARIABLE BOOTSTRAP_RESULT
-)
+# execute_process(
+#     COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} ./bootstrap
+#     RESULT_VARIABLE BOOTSTRAP_RESULT
+# )
 
-if(NOT BOOTSTRAP_RESULT EQUAL 0)
-    message(FATAL_ERROR "Jitter bootstrap failed")
-endif()
+# if(NOT BOOTSTRAP_RESULT EQUAL 0)
+#     message(FATAL_ERROR "Jitter bootstrap failed")
+# endif()
 
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} ./configure --prefix=${jitter_BINARY_DIR}
-    RESULT_VARIABLE CONFIGURE_RESULT
-)
-if(NOT CONFIGURE_RESULT EQUAL 0)
-    message(FATAL_ERROR "Jitter configure failed")
-endif()
+# execute_process(
+#     COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} ./configure --prefix=${jitter_BINARY_DIR}
+#     RESULT_VARIABLE CONFIGURE_RESULT
+# )
+# if(NOT CONFIGURE_RESULT EQUAL 0)
+#     message(FATAL_ERROR "Jitter configure failed")
+# endif()
 
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make
-    RESULT_VARIABLE MAKE_RESULT
-)
+# execute_process(
+#     COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make
+#     RESULT_VARIABLE MAKE_RESULT
+# )
 
-if(NOT MAKE_RESULT EQUAL 0)
-    message(FATAL_ERROR "Jitter make failed")
-endif()
+# if(NOT MAKE_RESULT EQUAL 0)
+#     message(FATAL_ERROR "Jitter make failed")
+# endif()
 
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make install
-    RESULT_VARIABLE MAKE_INSTALL_RESULT
-)
+# execute_process(
+#     COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make install
+#     RESULT_VARIABLE MAKE_INSTALL_RESULT
+# )
 
-if(NOT MAKE_INSTALL_RESULT EQUAL 0)
-    message(FATAL_ERROR "Jitter make install failed")
-endif()
+# if(NOT MAKE_INSTALL_RESULT EQUAL 0)
+#     message(FATAL_ERROR "Jitter make install failed")
+# endif()
 
 # do this again to make shared library, so annoying
 
@@ -66,8 +66,10 @@ if(NOT MAKE_RESULT_CLEAN EQUAL 0)
 endif()
 
 execute_process(
-    COMMAND ${CMAKE_COMMAND} -E env JITTER_SUBPACKAGE_DIRECTORY=1
-            ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} ./configure
+    COMMAND ${CMAKE_COMMAND} -E env
+        JITTER_SUBPACKAGE_DIRECTORY=1
+        CFLAGS=-fPIC
+        ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} ./configure
     RESULT_VARIABLE CONFIGURE_RESULT
 )
 if(NOT CONFIGURE_RESULT EQUAL 0)
@@ -75,7 +77,9 @@ if(NOT CONFIGURE_RESULT EQUAL 0)
 endif()
 
 execute_process(
-    COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make
+    COMMAND ${CMAKE_COMMAND} -E env
+        CFLAGS=-fPIC
+        ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make
     RESULT_VARIABLE MAKE_RESULT
 )
 
@@ -91,16 +95,16 @@ endif()
 
 find_program(JITTER_EXECUTABLE jitter HINTS ${jitter_BINARY_DIR}/bin NO_DEFAULT_PATH)
 # this is important here, make install doesn't work, so SOURCE_DIR has all the shared so
-find_library(JITTER_LIBRARY jitter PATHS ${jitter_SOURCE_DIR}/lib)
+find_library(JITTER_LIBRARY jitter PATHS ${jitter_SOURCE_DIR}/lib NO_DEFAULT_PATH)
 include_directories(${jitter_BINARY_DIR}/include)
 
 if(NOT JITTER_EXECUTABLE OR NOT JITTER_LIBRARY)
     message(FATAL_ERROR "Could not find Jitter after installation. Please check the installation process.")
 endif()
 
-# message("JITTER_EXECUTABLE: ${JITTER_EXECUTABLE}")
-# message("JITTER_LIBRARY: ${JITTER_LIBRARY}")
-# message("B: ${jitter_BINARY_DIR}")
+message("JITTER_EXECUTABLE: ${JITTER_EXECUTABLE}")
+message("JITTER_LIBRARY: ${JITTER_LIBRARY}")
+message("B: ${jitter_BINARY_DIR}")
 
 # --- Generate izmirvm-vm files ---
 add_custom_command(
@@ -118,14 +122,26 @@ set(IZMIRVM_SOURCES
 )
 
 # --- Create the izmirvm shared library ---
-message("JITTER_LIBRARY: ${JITTER_LIBRARY}")
+# set(JITTER_LIBRARY /home/user/jitter-shared/libjitter.so)
+message("Create izmirvm shared - JITTER_LIBRARY: ${JITTER_LIBRARY}")
 add_library(izmirvmlib SHARED ${IZMIRVM_SOURCES})
 target_link_libraries(izmirvmlib ${JITTER_LIBRARY})
-set_target_properties(izmirvmlib PROPERTIES
-                      POSITION_INDEPENDENT_CODE ON)
 
-# --- Compiler flags for izmirvm ---
+set_target_properties(izmirvmlib PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    WINDOWS_EXPORT_ALL_SYMBOLS ON  # Ensure all symbols are exported
+    # LINK_FLAGS "-Wl,-rpath"
+)
+
+# --- Compiler flags for izmirvmlib ---
 target_compile_options(izmirvmlib PRIVATE
     -O2 -fomit-frame-pointer -fno-reorder-functions -fno-lto -g0 -fno-var-tracking -fno-var-tracking-assignments -fno-reorder-blocks -fno-reorder-blocks-and-partition -fno-crossjumping -fno-thread-jumps -fno-tree-tail-merge -fno-isolate-erroneous-paths-dereference -fno-split-paths -fPIC -fno-align-loops -fno-align-jumps -fno-align-labels -fno-jump-tables -fno-tree-switch-conversion -flive-range-shrinkage -fno-ipa-icf -fno-ipa-cp -fno-ipa-cp-clone -mcmodel=large
-    -DJITTER_DISPATCH_NO_THREADING=1
+    # -O2 -fPIC -fomit-frame-pointer -fno-reorder-functions
+    # -export-dynamic
+    #  -fno-lto -g0 -fno-var-tracking -fno-var-tracking-assignments -fno-reorder-blocks -fno-reorder-blocks-and-partition -fno-crossjumping -fno-thread-jumps -fno-tree-tail-merge -fno-isolate-erroneous-paths-dereference -fno-split-paths -fPIC -fno-align-loops -fno-align-jumps -fno-align-labels -fno-jump-tables -fno-tree-switch-conversion -flive-range-shrinkage -fno-ipa-icf -fno-ipa-cp -fno-ipa-cp-clone -mcmodel=large
+    # -DJITTER_DISPATCH_NO_THREADING=1
+)
+
+target_compile_definitions(izmirvmlib PRIVATE
+    JITTER_DISPATCH_NO_THREADING=1
 )
