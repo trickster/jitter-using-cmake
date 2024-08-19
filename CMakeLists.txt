@@ -56,19 +56,24 @@ FetchContent_Populate(jitter)
 
 # do this again to make shared library, so annoying
 
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make clean
-    RESULT_VARIABLE MAKE_RESULT_CLEAN
-)
+# execute_process(
+#     COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make clean
+#     RESULT_VARIABLE MAKE_RESULT_CLEAN
+# )
 
-if(NOT MAKE_RESULT_CLEAN EQUAL 0)
-    message(FATAL_ERROR "make clean failed")
-endif()
+# if(NOT MAKE_RESULT_CLEAN EQUAL 0)
+#     message(FATAL_ERROR "make clean failed")
+# endif()
+
+set(ENV{JITTER_SUBPACKAGE} "1")
+set(ENV{CFLAGS} "-g -O2 -fPIC -fno-omit-frame-pointer")
+set(ENV{LDFLAGS} "-Wl,--export-dynamic")
 
 execute_process(
     COMMAND ${CMAKE_COMMAND} -E env
-        JITTER_SUBPACKAGE_DIRECTORY=1
-        CFLAGS=-fPIC
+        JITTER_SUBPACKAGE=1
+        # CFLAGS=-g -O2 -fPIC -fno-omit-frame-pointer
+        # LDFLAGS=-Wl,--export-dynamic
         ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} ./configure
     RESULT_VARIABLE CONFIGURE_RESULT
 )
@@ -77,9 +82,25 @@ if(NOT CONFIGURE_RESULT EQUAL 0)
 endif()
 
 execute_process(
-    COMMAND ${CMAKE_COMMAND} -E env
-        CFLAGS=-fPIC
-        ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make
+    COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} rm -rf lib non-convenience-lib
+    RESULT_VARIABLE DELETE_STUFF
+)
+
+if(NOT DELETE_STUFF EQUAL 0)
+    message(FATAL_ERROR "deleting failed")
+endif()
+
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make clean
+    RESULT_VARIABLE MAKE_RESULT
+)
+
+if(NOT MAKE_RESULT EQUAL 0)
+    message(FATAL_ERROR "make clean failed (shared)")
+endif()
+
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E chdir ${jitter_SOURCE_DIR} make
     RESULT_VARIABLE MAKE_RESULT
 )
 
@@ -90,7 +111,7 @@ endif()
 # --- Find all jitter related stuff ---
 # JITTER_SUBPACKAGE_DIRECTORY=1 ./configure
 # set(JITTER_LIBRARY /home/user/jitter-shared/libjitter.a)
-# set(JITTER_LIBRARY /home/user/jitter/non-convenience-lib/.libs/libjitter.a)
+# set(JITTER_LIBRARY /home/user/izmirstuff/izmir-2.0/build/_deps/jitter-src/non-convenience-lib/.libs/libjitter.so)
 # set(JITTER_LIBRARY /home/user/izmirstuff/izmir-2.0/build/_deps/jitter-src/lib/libjitter.a)
 
 find_program(JITTER_EXECUTABLE jitter HINTS ${jitter_BINARY_DIR}/bin NO_DEFAULT_PATH)
@@ -114,34 +135,64 @@ add_custom_command(
     VERBATIM
 )
 
-set(IZMIRVM_SOURCES
+set(IZMIRVM_SHARED_SOURCES
     izmirvm-vm.h
     izmirvm-vm1.c
     izmirvm-vm2.c
     # izmirvm-vm-main.c
 )
 
+set(IZMIRVM_SOURCES
+    izmirvm-vm.h
+    izmirvm-vm1.c
+    izmirvm-vm2.c
+    izmirvm-vm-main.c)
+
 # --- Create the izmirvm shared library ---
 # set(JITTER_LIBRARY /home/user/jitter-shared/libjitter.so)
+set(JITTER_LIBRARY /home/user/izmirstuff/izmir-2.0/build/_deps/jitter-src/non-convenience-lib/.libs/libjitter.a)
+set(JITTER_LIBRARY /home/user/izmirstuff/izmir-2.0/build/_deps/jitter-src/lib/.libs/libjitter.a)
+# set(JITTER_LIBRARY /home/user/izmirstuff/izmir-2.0/build/_deps/jitter-src/lib/libjitter.a)
 message("Create izmirvm shared - JITTER_LIBRARY: ${JITTER_LIBRARY}")
-add_library(izmirvmlib SHARED ${IZMIRVM_SOURCES})
+add_library(izmirvmlib SHARED ${IZMIRVM_SHARED_SOURCES})
 target_link_libraries(izmirvmlib ${JITTER_LIBRARY})
+
+# target_include_directories(izmirvmlib PRIVATE ${jitter_BINARY_DIR}/include)
 
 set_target_properties(izmirvmlib PROPERTIES
     POSITION_INDEPENDENT_CODE ON
     WINDOWS_EXPORT_ALL_SYMBOLS ON  # Ensure all symbols are exported
-    # LINK_FLAGS "-Wl,-rpath"
+    # LINK_FLAGS -Wl,-rpath
+    BUILD_WITH_INSTALL_RPATH TRUE
 )
 
 # --- Compiler flags for izmirvmlib ---
 target_compile_options(izmirvmlib PRIVATE
-    -O2 -fomit-frame-pointer -fno-reorder-functions -fno-lto -g0 -fno-var-tracking -fno-var-tracking-assignments -fno-reorder-blocks -fno-reorder-blocks-and-partition -fno-crossjumping -fno-thread-jumps -fno-tree-tail-merge -fno-isolate-erroneous-paths-dereference -fno-split-paths -fPIC -fno-align-loops -fno-align-jumps -fno-align-labels -fno-jump-tables -fno-tree-switch-conversion -flive-range-shrinkage -fno-ipa-icf -fno-ipa-cp -fno-ipa-cp-clone -mcmodel=large
-    # -O2 -fPIC -fomit-frame-pointer -fno-reorder-functions
-    # -export-dynamic
+    # -O2 -fPIC -fomit-frame-pointer -fno-reorder-functions -fno-lto -g0 -fno-var-tracking -fno-var-tracking-assignments -fno-reorder-blocks -fno-reorder-blocks-and-partition -fno-crossjumping -fno-thread-jumps -fno-tree-tail-merge -fno-isolate-erroneous-paths-dereference -fno-split-paths -fPIC -fno-align-loops -fno-align-jumps -fno-align-labels -fno-jump-tables -fno-tree-switch-conversion -flive-range-shrinkage -fno-ipa-icf -fno-ipa-cp -fno-ipa-cp-clone -mcmodel=large
+    -O2 -fPIC -fomit-frame-pointer -fno-reorder-functions
+    -export-dynamic
     #  -fno-lto -g0 -fno-var-tracking -fno-var-tracking-assignments -fno-reorder-blocks -fno-reorder-blocks-and-partition -fno-crossjumping -fno-thread-jumps -fno-tree-tail-merge -fno-isolate-erroneous-paths-dereference -fno-split-paths -fPIC -fno-align-loops -fno-align-jumps -fno-align-labels -fno-jump-tables -fno-tree-switch-conversion -flive-range-shrinkage -fno-ipa-icf -fno-ipa-cp -fno-ipa-cp-clone -mcmodel=large
     # -DJITTER_DISPATCH_NO_THREADING=1
 )
 
 target_compile_definitions(izmirvmlib PRIVATE
+    JITTER_DISPATCH_NO_THREADING=1
+)
+
+
+# --- Create the izmirvm binary ---
+add_executable(izmirvm_binary ${IZMIRVM_SOURCES})
+target_link_libraries(izmirvm_binary ${JITTER_LIBRARY})
+
+set_target_properties(izmirvm_binary PROPERTIES
+    OUTPUT_NAME "izmirvm"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
+target_compile_options(izmirvm_binary PRIVATE
+    -fno-lto -g0 -fno-var-tracking -fno-var-tracking-assignments -fno-reorder-blocks -fno-reorder-blocks-and-partition -fno-crossjumping -fno-thread-jumps -fno-tree-tail-merge -fno-isolate-erroneous-paths-dereference -fno-split-paths -fPIC -fno-align-loops -fno-align-jumps -fno-align-labels -fno-jump-tables -fno-tree-switch-conversion -flive-range-shrinkage -fno-ipa-icf -fno-ipa-cp -fno-ipa-cp-clone -mcmodel=large
+)
+
+target_compile_definitions(izmirvm_binary PRIVATE
     JITTER_DISPATCH_NO_THREADING=1
 )
