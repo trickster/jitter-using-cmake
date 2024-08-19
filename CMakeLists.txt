@@ -148,6 +148,13 @@ set(IZMIRVM_SOURCES
     izmirvm-vm2.c
     izmirvm-vm-main.c)
 
+
+set(IZMIRVM_MINIMAL_SOURCES
+    izmirvm-vm.h
+    izmirvm-vm1.c
+    izmirvm-vm2.c
+    izmirvm-minimal-main.c)
+
 # --- Create the izmirvm shared library ---
 # set(JITTER_LIBRARY /home/user/jitter-shared/libjitter.so)
 set(JITTER_LIBRARY /home/user/izmirstuff/izmir-2.0/build/_deps/jitter-src/non-convenience-lib/.libs/libjitter.a)
@@ -194,5 +201,23 @@ target_compile_options(izmirvm_binary PRIVATE
 )
 
 target_compile_definitions(izmirvm_binary PRIVATE
+    JITTER_DISPATCH_NO_THREADING=1
+)
+
+
+# --- Create the minimal izmirvm binary ---
+add_executable(izmirvm_minimal_binary ${IZMIRVM_MINIMAL_SOURCES})
+target_link_libraries(izmirvm_minimal_binary ${JITTER_LIBRARY})
+
+set_target_properties(izmirvm_minimal_binary PROPERTIES
+    OUTPUT_NAME "izmirvm-minimal"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
+target_compile_options(izmirvm_minimal_binary PRIVATE
+    # -fno-lto -g0 -fno-var-tracking -fno-var-tracking-assignments -fno-reorder-blocks -fno-reorder-blocks-and-partition -fno-crossjumping -fno-thread-jumps -fno-tree-tail-merge -fno-isolate-erroneous-paths-dereference -fno-split-paths -fPIC -fno-align-loops -fno-align-jumps -fno-align-labels -fno-jump-tables -fno-tree-switch-conversion -flive-range-shrinkage -fno-ipa-icf -fno-ipa-cp -fno-ipa-cp-clone -mcmodel=large
+)
+
+target_compile_definitions(izmirvm_minimal_binary PRIVATE
     JITTER_DISPATCH_NO_THREADING=1
 )
